@@ -8,10 +8,48 @@
 // ===========================
 // Wi-Fi 設定
 // ===========================
-const char* ssid = "YTY_2.4g";
-const char* password = "weareytylab";
+const char *ssid1 = "YTY_2.4g";
+const char *password1 = "weareytylab";
+const char *ssid2 = "TP-Link_9BD8_2.4g";
+const char *password2 = "qwer4321";
 
+String connectedSSID = "未連接";
 WebServer server(80);
+
+void connectToWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid1, password1);
+  Serial.print("WiFi 連線中");
+
+  for (int i = 0; i < 5 && WiFi.status() != WL_CONNECTED; ++i) {
+    delay(200);
+    Serial.print(".");
+  }
+  Serial.println();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    connectedSSID = WiFi.SSID();
+    Serial.print("✅ WiFi 已連上，IP: ");
+    Serial.println(WiFi.localIP());
+    return;
+  }
+
+  Serial.println("❌ WiFi 連線失敗，嘗試第二組...");
+  WiFi.begin(ssid2, password2);
+  for (int i = 0; i < 5 && WiFi.status() != WL_CONNECTED; ++i) {
+    delay(200);
+    Serial.print(".");
+  }
+  Serial.println();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    connectedSSID = WiFi.SSID();
+    Serial.print("✅ 第二組 WiFi 已連上，IP: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("❌ 第二組 WiFi 也連線失敗（將不開啟 Web 介面）");
+  }
+}
 
 // ===========================
 // 主畫面 HTML
@@ -127,21 +165,10 @@ void setup() {
   s->set_contrast(s, 1);
   s->set_saturation(s, 1);
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  WiFi.setSleep(false);
+  // 連線 WiFi
+  connectToWiFi();
 
-  Serial.print("📡 連線 Wi-Fi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(400);
-    Serial.print(".");
-  }
-
-  Serial.println("\n✅ Wi-Fi 已連線");
-  Serial.print("📶 IP：");
-  Serial.println(WiFi.localIP());
-
-  // 路由
+  // 啟動伺服器
   server.on("/", handleRoot);
   server.on("/stream", handleStream);
   server.begin();

@@ -40,6 +40,8 @@ float feedbackGain = 1.0f;// 回授權重 (0 = 關閉, 1 = 全部啟用)
 // ================== WiFi ==================
 const char *ssid1 = "YTY_2.4g";
 const char *password1 = "weareytylab";
+const char *ssid2 = "TP-Link_9BD8_2.4g";
+const char *password2 = "qwer4321";
 String connectedSSID = "未連接";
 WebServer server(80);
 
@@ -282,8 +284,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       <button onclick="setMode(0)">Sin 模式</button>
       <button onclick="setMode(1)">CPG 模式</button>
       <button onclick="setMode(2)">Offset 模式</button><br>
-      <button onclick="setMode(3)">S 模式（動）</button>
-      <button onclick="setMode(4)">S 模式（靜）</button>
       <p>目前模式：<span id="mode">-</span></p>
       <button onclick="toggleFeedback()">切換回授</button>
       <p>回授狀態：<span id="feedback">-</span></p>
@@ -650,20 +650,37 @@ void connectToWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid1, password1);
   Serial.print("WiFi 連線中");
-  for (int i = 0; i < 30 && WiFi.status() != WL_CONNECTED; ++i) {
+  for (int i = 0; i < 5 && WiFi.status() != WL_CONNECTED; ++i) {
     delay(200);
     Serial.print(".");
   }
   Serial.println();
+
   if (WiFi.status() == WL_CONNECTED) {
     connectedSSID = WiFi.SSID();
     setupWebServer();
     Serial.print("✅ WiFi 已連上，IP: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.println("❌ WiFi 連線失敗（將不開啟 Web 介面）");
+    Serial.println("❌ WiFi 連線失敗，嘗試連接第二組 WiFi...");
+    WiFi.begin(ssid2, password2);
+    for (int i = 0; i < 5 && WiFi.status() != WL_CONNECTED; ++i) {
+      delay(200);
+      Serial.print(".");
+    }
+    Serial.println();
+
+    if (WiFi.status() == WL_CONNECTED) {
+      connectedSSID = WiFi.SSID();
+      setupWebServer();
+      Serial.print("✅ 第二組 WiFi 已連上，IP: ");
+      Serial.println(WiFi.localIP());
+    } else {
+      Serial.println("❌ 第二組 WiFi 也連線失敗（將不開啟 Web 介面）");
+    }
   }
 }
+
 
 // ================== setup / loop ==================
 void setup() {
