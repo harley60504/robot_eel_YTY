@@ -13,7 +13,7 @@ static const char* CTRL_AP_SSID = "ESP32_Controller_AP";
 static const char* CTRL_AP_PASS = "12345678";
 
 // ✅ 固定 IP（請確認 Controller AP 是 192.168.4.1/24）
-static const IPAddress STATIC_IP(192, 168, 4, 2);
+static const IPAddress STATIC_IP(192, 168, 4, 201);
 static const IPAddress GATEWAY  (192, 168, 4, 1);
 static const IPAddress SUBNET   (255, 255, 255, 0);
 static const IPAddress DNS1     (192, 168, 4, 1);  // 可改 8.8.8.8 也行

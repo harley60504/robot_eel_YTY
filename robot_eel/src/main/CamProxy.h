@@ -7,7 +7,7 @@ namespace CamProxy {
 
   // ===== 固定相機 IP（預設 192.168.4.2）=====
   static WebServer* s_server = nullptr;
-  static IPAddress  s_fixedIP(192, 168, 4, 2);
+  static IPAddress  s_fixedIP(192, 168, 4, 201);
   static uint16_t   s_camPort = 80;
 
   // 對外 API（可在 setup 內覆寫 IP）
