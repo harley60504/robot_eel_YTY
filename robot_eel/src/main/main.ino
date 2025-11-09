@@ -1,4 +1,3 @@
-// --- 必要函式庫（只在 main.ino 引入一次） ---
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -11,7 +10,6 @@
 #include <Adafruit_ADS1X15.h>
 #include <PL_ADXL355.h>
 
-// --- 我們的模組 ---
 #include "config.h"
 #include "utils.h"
 #include "wifi_mgr.h"
@@ -23,7 +21,6 @@
 #include "cpg.h"
 #include "servo.h"
 
-// ================== 定義 extern 實體 ==================
 WebServer server(80);
 
 // WiFi
@@ -36,7 +33,7 @@ const char* AP_PASS = "12345678";
 const char* HOSTNAME = "esp32-controller";
 String connectedSSID = "未連接";
 
-// 伺服 / 參數
+// Servo / params
 float servoDefaultAngles[bodyNum] = {120,120,120,120,120,120};
 float angleDeg[bodyNum];
 float Ajoint = 20.0f;
@@ -59,7 +56,7 @@ float adsVoltage1[4] = {0,0,0,0};
 float adsVoltage2[4] = {0,0,0,0};
 float ads1Diff[3]    = {0,0,0};
 
-// 日誌
+// Logging
 unsigned long g_lastLogTime = 0;
 
 // ADXL355
@@ -67,16 +64,13 @@ PL::ADXL355 adxl355;
 volatile float adxlX = 0.0f, adxlY = 0.0f, adxlZ = 0.0f;
 volatile float pitchDeg = 0.0f, rollDeg = 0.0f;
 
-// ================== setup / loop ==================
 void setup() {
   Serial.begin(115200);
   delay(1000);
   Serial.println("✅ 原生 USB 已啟動");
 
-  // 伺服 UART
   Serial1.begin(115200, SERIAL_8N1, -1, SERVO_TX_PIN);
 
-  // I2C
   Wire.begin(SDA_PIN, SCL_PIN);
   Wire.setTimeout(50);
   if (!ads1.begin(0x48, &Wire)) Serial.println("❌ 找不到 ADS1115 #1 (0x48)");
@@ -84,10 +78,7 @@ void setup() {
   if (!ads2.begin(0x49, &Wire)) Serial.println("❌ 找不到 ADS1115 #2 (0x49)");
   else { ads2.setGain(GAIN_TWOTHIRDS); Serial.println("✅ ADS1115 #2 初始化完成"); }
 
-  // ADXL355
   initADXL();
-
-  // 檔案系統 / WiFi / CPG
   initLogFile();
   connectToWiFi();
 
@@ -102,7 +93,6 @@ void setup() {
 
   initCPG();
 
-  // Tasks
   xTaskCreatePinnedToCore(servoTask, "ServoTask", 4096, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(i2cTask,  "I2CTask",   4096, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(adxlTask, "ADXLTask",  4096, NULL, 1, NULL, 1);

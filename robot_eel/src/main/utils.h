@@ -1,5 +1,6 @@
 #pragma once
 #include "config.h"
+#include <math.h>
 
 static inline float clampf(float x, float lo, float hi) {
   return x < lo ? lo : (x > hi ? hi : x);

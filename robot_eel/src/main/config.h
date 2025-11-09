@@ -4,7 +4,6 @@
 #include <Adafruit_ADS1X15.h>
 #include <PL_ADXL355.h>
 
-// ---------- 常數 / Pins ----------
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -21,13 +20,12 @@
 #define SCL_PIN 2
 #define SDA_PIN 3
 
-// ADXL355 SPI pins（依你的板子修改）
+// ADXL355 SPI pins
 #define ADXL_SCLK 14
 #define ADXL_MISO 12
 #define ADXL_MOSI 13
 #define ADXL_CS   15
 
-// ---------- 前置宣告（型別/結構） ----------
 struct HopfOscillator {
   float r;
   float theta;
@@ -35,7 +33,6 @@ struct HopfOscillator {
   float mu;
 };
 
-// ---------- extern 全域變數（由 main.ino 定義） ----------
 extern WebServer server;
 
 // WiFi
@@ -48,11 +45,9 @@ extern const char* AP_PASS;
 extern const char* HOSTNAME;
 extern String connectedSSID;
 
-// 伺服角度
+// Servo / params
 extern float servoDefaultAngles[bodyNum];
 extern float angleDeg[bodyNum];
-
-// 參數
 extern float Ajoint;
 extern float frequency;
 extern float lambda;
@@ -73,7 +68,7 @@ extern float adsVoltage1[4];
 extern float adsVoltage2[4];
 extern float ads1Diff[3];
 
-// 日誌
+// Logging
 extern unsigned long g_lastLogTime;
 
 // ADXL355
@@ -81,5 +76,5 @@ extern PL::ADXL355 adxl355;
 extern volatile float adxlX, adxlY, adxlZ;
 extern volatile float pitchDeg, rollDeg;
 
-// ---------- 其他跨檔案函式（避免相依循環時可先宣告） ----------
-void logADSDataEveryMinute();  // logging.h 實作
+// forward decl
+void logADSDataEveryMinute();
