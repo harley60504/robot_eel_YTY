@@ -5,111 +5,367 @@
 #include "index_html.h"
 #include "CamProxy.h"
 #include <HTTPClient.h>
+#include <Preferences.h>
 
-// 🧠 相機 IP（依實際設定修改）
-String cameraIP = "192.168.4.201";  // XIAO ESP32S3-CAM
+// -------------------------------------------
+// WiFi item struct
+// -------------------------------------------
+struct WiFiItem {
+  String ssid;
+  String pass;
+};
+
+// -------------------------------------------
+// Load WiFi list
+// -------------------------------------------
+std::vector<WiFiItem> loadSavedWiFi() {
+  prefs.begin("wifi", true);
+  String raw = prefs.getString("list", "[]");
+  prefs.end();
+
+  std::vector<WiFiItem> list;
+
+  DynamicJsonDocument doc(1024);
+  deserializeJson(doc, raw);
+
+  for (JsonObject obj : doc.as<JsonArray>()) {
+    WiFiItem item;
+    item.ssid = obj["ssid"].as<String>();
+    item.pass = obj["pass"].as<String>();
+    list.push_back(item);
+  }
+  return list;
+}
+
+// -------------------------------------------
+// Save WiFi list
+// -------------------------------------------
+void saveWiFiList(std::vector<WiFiItem>& list) {
+  DynamicJsonDocument doc(1024);
+  JsonArray arr = doc.to<JsonArray>();
+
+  for (auto& w : list) {
+    JsonObject o = arr.createNestedObject();
+    o["ssid"] = w.ssid;
+    o["pass"] = w.pass;
+  }
+
+  String out;
+  serializeJson(arr, out);
+
+  prefs.begin("wifi", false);
+  prefs.putString("list", out);
+  prefs.end();
+}
+
+// Camera IP
+String cameraIP = "192.168.4.201";
 
 inline void setupWebServer() {
 
-  // --- 首頁 HTML ---
-  server.on("/", []() { server.send(200, "text/html", INDEX_HTML); });
+  // ==========================================
+  // Serve index.html
+  // ==========================================
+  server.on("/", []() {
+    server.send(200, "text/html", INDEX_HTML);
+  });
 
-  // --- 串流代理 ---
+  // camera stream proxy
   CamProxy::attach(server);
 
-  // --- 模式與控制 ---
+  // ==========================================
+  // WiFi Scan
+  // ==========================================
+  server.on("/wifi_scan", []() {
+    int n = WiFi.scanNetworks();
+
+    DynamicJsonDocument doc(2048);
+    JsonArray arr = doc.createNestedArray("wifi");
+
+    for (int i = 0; i < n; i++) {
+      JsonObject w = arr.createNestedObject();
+      w["ssid"] = WiFi.SSID(i);
+      w["rssi"] = WiFi.RSSI(i);
+    }
+
+    String out;
+    serializeJson(doc, out);
+    server.send(200, "application/json", out);
+  });
+
+  // ==========================================
+  // WiFi Saved List
+  // ==========================================
+  server.on("/wifi_saved", []() {
+    auto list = loadSavedWiFi();  // ← 用 WiFiItem 結構
+
+    DynamicJsonDocument doc(2048);
+    JsonArray arr = doc.createNestedArray("saved");
+
+    for (auto& w : list) {
+      JsonObject o = arr.createNestedObject();
+      o["ssid"] = w.ssid;
+    }
+
+    String out;
+    serializeJson(doc, out);
+    server.send(200, "application/json", out);
+  });
+
+  // ==========================================
+  // WiFi Connect
+  // ==========================================
+  server.on("/wifi_connect", []() {
+    if (!server.hasArg("ssid")) {
+      server.send(400, "text/plain", "缺少 ssid");
+      return;
+    }
+
+    String ssid = server.arg("ssid");
+    String pass = server.hasArg("pass") ? server.arg("pass") : "";
+
+    auto list = loadSavedWiFi();
+    bool found = false;
+
+    for (auto& w : list) {
+      if (w.ssid == ssid) {
+        if (pass.length() > 0)
+          w.pass = pass;
+        pass = w.pass;
+        found = true;
+      }
+    }
+
+    if (!found)
+      list.push_back({ssid, pass});
+
+    saveWiFiList(list);
+
+    if (tryConnectOnce(ssid.c_str(), pass.c_str()))
+      server.send(200, "text/plain", "✅ 已連線：" + ssid);
+    else
+      server.send(200, "text/plain", "❌ 連線失敗：" + ssid);
+  });
+
+  // ==========================================
+  // WiFi Forget
+  // ==========================================
+  server.on("/wifi_forget", []() {
+    if (!server.hasArg("ssid")) {
+      server.send(400, "text/plain", "缺少 ssid");
+      return;
+    }
+
+    String ssid = server.arg("ssid");
+    auto list = loadSavedWiFi();
+
+    std::vector<WiFiItem> newList;
+    for (auto& w : list) {
+      if (w.ssid != ssid)
+        newList.push_back(w);
+    }
+
+    saveWiFiList(newList);
+    server.send(200, "text/plain", "🗑 已刪除：" + ssid);
+  });
+
+  server.on("/wifi_reconnect", []() {
+    if (!server.hasArg("ssid")) {
+      server.send(400, "text/plain", "缺少 ssid");
+      return;
+    }
+
+    String ssid = server.arg("ssid");
+    auto list = loadSavedWiFi();
+
+    String pass = "";
+    for (auto& w : list) {
+      if (w.ssid == ssid) {
+        pass = w.pass;
+        break;
+      }
+    }
+
+    if (pass == "") {
+      server.send(200, "text/plain", "❌ 找不到儲存的密碼");
+      return;
+    }
+
+    if (tryConnectOnce(ssid.c_str(), pass.c_str())) {
+      server.send(200, "text/plain", "✅ 已連線：" + ssid);
+    } else {
+      server.send(200, "text/plain", "❌ 連線失敗：" + ssid);
+    }
+  });
+
+  server.on("/wifi_edit_pass", []() {
+    if (!server.hasArg("ssid") || !server.hasArg("pass")) {
+      server.send(400, "text/plain", "缺少 ssid 或 pass");
+      return;
+    }
+
+    String ssid = server.arg("ssid");
+    String pass = server.arg("pass");
+
+    auto list = loadSavedWiFi();
+
+    bool changed = false;
+    for (auto& w : list) {
+      if (w.ssid == ssid) {
+        w.pass = pass;
+        changed = true;
+        break;
+      }
+    }
+
+    if (!changed) {
+      list.push_back({ssid, pass});
+    }
+
+    saveWiFiList(list);
+
+    server.send(200, "text/plain", "✏️ 已更新密碼：" + ssid);
+  });
+
+  // 目前連線資訊
+server.on("/wifi_current", []() {
+  DynamicJsonDocument doc(256);
+
+  if (WiFi.status() == WL_CONNECTED) {
+    doc["connected"] = true;
+    doc["ssid"] = WiFi.SSID();
+    doc["ip"]   = WiFi.localIP().toString();
+    doc["rssi"] = WiFi.RSSI();
+  } else {
+    doc["connected"] = false;
+  }
+
+  String out;
+  serializeJson(doc, out);
+  server.send(200, "application/json", out);
+});
+
+
+
+  // ==========================================
+  // Robot control API （全部保留）
+  // ==========================================
   server.on("/setMode", []() {
     if (server.hasArg("m")) {
       controlMode = server.arg("m").toInt();
-      if (controlMode == 1) { extern void initCPG(); initCPG(); }
+      if (controlMode == 1) {
+        extern void initCPG();
+        initCPG();
+      }
     }
-    String modeName = (controlMode==0)?"Sin":(controlMode==1)?"CPG":(controlMode==2)?"Offset":"Unknown";
+    String modeName = (controlMode == 0) ? "Sin" :
+                      (controlMode == 1) ? "CPG" :
+                      (controlMode == 2) ? "Offset" : "Unknown";
     server.send(200, "text/plain", modeName);
   });
 
   server.on("/toggleFeedback", []() {
     useFeedback = !useFeedback;
-    server.send(200, "text/plain", String(useFeedback ? "開啟" : "關閉"));
+    server.send(200, "text/plain", useFeedback ? "開啟" : "關閉");
   });
 
-  server.on("/setFrequency", []() { if (server.hasArg("f")) frequency = server.arg("f").toFloat(); server.send(200, "text/plain", String(frequency)); });
-  server.on("/setAmplitude", []() { if (server.hasArg("a")) Ajoint = server.arg("a").toFloat(); server.send(200, "text/plain", String(Ajoint)); });
-  server.on("/setLambda",   []() { if (server.hasArg("lambda")) lambda = server.arg("lambda").toFloat(); server.send(200, "text/plain", String(lambda)); });
-  server.on("/setL",        []() { if (server.hasArg("L")) L = server.arg("L").toFloat(); server.send(200, "text/plain", String(L)); });
-  server.on("/setFeedbackGain", []() { if (server.hasArg("g")) feedbackGain = server.arg("g").toFloat(); server.send(200, "text/plain", String(feedbackGain)); });
+  server.on("/setFrequency", []() {
+    if (server.hasArg("f")) frequency = server.arg("f").toFloat();
+    server.send(200, "text/plain", String(frequency));
+  });
 
-  // --- 狀態 JSON ---
+  server.on("/setAmplitude", []() {
+    if (server.hasArg("a")) Ajoint = server.arg("a").toFloat();
+    server.send(200, "text/plain", String(Ajoint));
+  });
+
+  server.on("/setLambda", []() {
+    if (server.hasArg("lambda")) lambda = server.arg("lambda").toFloat();
+    server.send(200, "text/plain", String(lambda));
+  });
+
+  server.on("/setL", []() {
+    if (server.hasArg("L")) L = server.arg("L").toFloat();
+    server.send(200, "text/plain", String(L));
+  });
+
+  server.on("/setFeedbackGain", []() {
+    if (server.hasArg("g")) feedbackGain = server.arg("g").toFloat();
+    server.send(200, "text/plain", String(feedbackGain));
+  });
+
+  // ==========================================
+  // Status JSON
+  // ==========================================
   server.on("/status", []() {
-    String json = "{";
-    json += "\"frequency\":" + String(frequency, 2) + ",";
-    json += "\"amplitude\":" + String(Ajoint, 2) + ",";
-    json += "\"lambda_input\":" + String(lambda * L, 2) + ",";
-    json += "\"lambda\":" + String(lambda, 2) + ",";
-    json += "\"L\":" + String(L, 2) + ",";
-    String modeName = (controlMode==0)?"Sin":(controlMode==1)?"CPG":(controlMode==2)?"Offset":"Unknown";
-    json += "\"mode\":\"" + modeName + "\",";
-    json += "\"feedback\":\"" + String(useFeedback ? "開啟" : "關閉") + "\",";
-    json += "\"fbGain\":" + String(feedbackGain, 2) + ",";
-    json += "\"adxl_x_g\":" + String(adxlX, 4) + ",";
-    json += "\"adxl_y_g\":" + String(adxlY, 4) + ",";
-    json += "\"adxl_z_g\":" + String(adxlZ, 4) + ",";
-    json += "\"pitch_deg\":" + String(pitchDeg, 2) + ",";
-    json += "\"roll_deg\":"  + String(rollDeg, 2) + ",";
-    for (int i=0;i<4;i++) json += "\"ads1_ch"+String(i)+"\":"+String(adsVoltage1[i],4)+",";
-    for (int i=0;i<4;i++) { json += "\"ads2_ch"+String(i)+"\":"+String(adsVoltage2[i],4); if (i<3) json += ","; }
-    json += ",\"uptime_min\":" + String(millis() / 1000.0 / 60.0, 3);
-    json += "}";
-    server.send(200, "application/json", json);
+    DynamicJsonDocument doc(2048);
+
+    doc["frequency"] = frequency;
+    doc["amplitude"] = Ajoint;
+    doc["lambda"] = lambda;
+    doc["L"] = L;
+    doc["fbGain"] = feedbackGain;
+
+    doc["adxl_x_g"] = adxlX;
+    doc["adxl_y_g"] = adxlY;
+    doc["adxl_z_g"] = adxlZ;
+    doc["pitch_deg"] = pitchDeg;
+    doc["roll_deg"] = rollDeg;
+
+    // ★ 修正：符合前端命名方式
+    for (int i = 0; i < 4; i++) {
+      doc["ads1_ch" + String(i)] = adsVoltage1[i];
+    }
+    for (int i = 0; i < 4; i++) {
+      doc["ads2_ch" + String(i)] = adsVoltage2[i];
+    }
+    // 🕒 分鐘 + 秒
+    unsigned long ms = millis();
+    doc["uptime_min"] = ms / 60000;         // 整數分鐘
+    doc["uptime_sec"] = (ms / 1000) % 60;   // 秒（0~59）
+
+    String out;
+    serializeJson(doc, out);
+    server.send(200, "application/json", out);
   });
 
-  // --- 增減快速調整 ---
-  server.on("/increase_freq",   []() { frequency = fminf(frequency + 0.1f, 3.0f); server.send(200, "ok"); });
-  server.on("/decrease_freq",   []() { frequency = fmaxf(frequency - 0.1f, 0.1f); server.send(200, "ok"); });
-  server.on("/increase_ajoint", []() { Ajoint    = fminf(Ajoint + 5.0f, 90.0f);  server.send(200, "ok"); });
-  server.on("/decrease_ajoint", []() { Ajoint    = fmaxf(Ajoint - 5.0f, 0.0f);   server.send(200, "ok"); });
-  server.on("/increase_lambda", []() { lambda    = fminf(lambda + 0.05f, 2.0f);  server.send(200, "ok"); });
-  server.on("/decrease_lambda", []() { lambda    = fmaxf(lambda - 0.05f, 0.1f);  server.send(200, "ok"); });
-  server.on("/increase_L",      []() { L         = fminf(L + 0.05f, 2.0f);       server.send(200, "ok"); });
-  server.on("/decrease_L",      []() { L         = fmaxf(L - 0.05f, 0.1f);       server.send(200, "ok"); });
-
-  // --- 暫停控制與重置 ---
-  server.on("/toggle_pause", []() { isPaused = !isPaused; server.send(200, "ok"); });
-  server.on("/reset_all", []() {
-    frequency = 0.7f; Ajoint = 30.0f; adsMinValidVoltage = 0.6f; isPaused = false;
-    if (controlMode == 1) { extern void initCPG(); initCPG(); }
-    server.send(200, "ok");
-  });
-
-  // --- CSV 下載 ---
+  // ==========================================
+  // CSV download
+  // ==========================================
   server.on("/download", []() {
-    if (!SPIFFS.exists("/data.csv")) { server.send(404, "text/plain", "data.csv 不存在"); return; }
+    if (!SPIFFS.exists("/data.csv")) {
+      server.send(404, "text/plain", "data.csv 不存在");
+      return;
+    }
     File f = SPIFFS.open("/data.csv", "r");
     server.streamFile(f, "text/csv");
     f.close();
   });
 
-  // --- ✅ 新增：相機控制代理 ---
+  // ==========================================
+  // Camera control proxy
+  // ==========================================
   server.on("/cam_control", []() {
     if (!server.hasArg("var") || !server.hasArg("val")) {
-      server.send(400, "text/plain", "缺少參數 var 或 val");
+      server.send(400, "text/plain", "缺少 var 或 val");
       return;
     }
-    String var = server.arg("var");
-    String val = server.arg("val");
 
     HTTPClient http;
-    String url = "http://" + cameraIP + "/control?var=" + var + "&val=" + val;
+    String url = "http://" + cameraIP + "/control?var=" +
+                 server.arg("var") + "&val=" + server.arg("val");
+
     http.begin(url);
-    int httpCode = http.GET();
-    String response = http.getString();
+    int code = http.GET();
+    String res = http.getString();
     http.end();
 
-    if (httpCode > 0) {
-      server.send(200, "text/plain", "OK: " + response);
-    } else {
-      server.send(500, "text/plain", "無法連線到相機");
-    }
+    if (code > 0)
+      server.send(200, "text/plain", "OK:" + res);
+    else
+      server.send(500, "text/plain", "相機未回應");
   });
 
   server.begin();
+  Serial.println("🌐 Web Server 啟動完成");
 }

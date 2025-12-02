@@ -24,10 +24,6 @@
 WebServer server(80);
 
 // WiFi
-const char* ssid1 = "YTY_2.4g";
-const char* password1 = "weareytylab";
-const char* ssid2 = "S25";
-const char* password2 = "26789774";
 const char* AP_SSID = "ESP32_Controller_AP";
 const char* AP_PASS = "12345678";
 const char* HOSTNAME = "esp32-controller";

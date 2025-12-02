@@ -36,14 +36,10 @@ struct HopfOscillator {
 extern WebServer server;
 
 // WiFi
-extern const char* ssid1;
-extern const char* password1;
-extern const char* ssid2;
-extern const char* password2;
 extern const char* AP_SSID;
 extern const char* AP_PASS;
 extern const char* HOSTNAME;
-extern String connectedSSID;
+
 
 // Servo / params
 extern float servoDefaultAngles[bodyNum];

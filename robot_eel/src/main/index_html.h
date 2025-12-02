@@ -15,7 +15,6 @@ body {
   margin: 0;
 }
 
-/* ===== 🔹 全域標題 ===== */
 h2 {
   margin: 0;
   padding: 18px;
@@ -26,16 +25,26 @@ h2 {
   box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
-/* ===== 🧱 卡片群組 ===== */
 .container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+
+  padding: 16px 24px 16px;  /* ⬅ 上 16、左右 24、下 16 */
+  max-width: 1100px;
+  margin: 0 auto;
+
+  justify-content: center;
+}
+
+
+.flex-wrap {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  padding: 12px;
+  justify-content: center;   /* 每一排從中間開始排 */
   gap: 16px;
 }
 
-/* ===== 📦 卡片 ===== */
 .card {
   width: 320px;
   background: white;
@@ -47,7 +56,6 @@ h2 {
 }
 .card:hover { transform: translateY(-4px); }
 
-/* ===== 🏷 卡片內部標題 ===== */
 .card h3 {
   margin-top: 0;
   margin-bottom: 10px;
@@ -56,7 +64,6 @@ h2 {
   padding-left: 10px;
 }
 
-/* ===== 🎛 按鈕與輸入 ===== */
 button, input, select {
   font-size: 16px;
   padding: 6px 10px;
@@ -75,10 +82,8 @@ button {
 }
 button:hover { background: #0059c4; }
 
-/* ===== 🟦 感測 & 相機 ===== */
 .sensor-table td { padding: 3px 6px; }
 
-/* ===== 🎥 相機控制區 ===== */
 .cam-control {
   display: grid;
   grid-template-columns: 1fr;
@@ -87,154 +92,299 @@ button:hover { background: #0059c4; }
 }
 .cam-control label { display: block; }
 
-/* ===== 📱 手機優化 ===== */
 @media (max-width: 480px){
   .card { width: 90%; }
 }
+
+/* ---------------- WiFi UI 美化 ---------------- */
+.wifi-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wifi-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wifi-btn {
+  padding: 4px 10px;
+  margin-left: 6px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.wifi-btn-edit { background:#28a745; }
+.wifi-btn-edit:hover { background:#1d7d33; }
+
+.wifi-btn-del { background:#dc3545; }
+.wifi-btn-del:hover { background:#b02a37; }
+
+.wifi-btn-go { background:#007bff; }
+.wifi-btn-go:hover { background:#0059c4; }
+
+/* 彈窗 */
+#popupBg {
+  display:none;
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.5); 
+  backdrop-filter: blur(3px);
+}
+
+#wifiPopup {
+  position:absolute; 
+  top:40%; 
+  left:50%; 
+  transform:translate(-50%,-50%);
+  background:white; 
+  padding:20px 25px;
+  border-radius:15px; 
+  width:260px;
+  box-shadow:0 0 18px rgba(0,0,0,0.25);
+}
+
+.param-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.param-row label {
+  width: 90px;
+  font-weight: 600;
+}
+
+.param-row input {
+  flex: 1;
+}
+
+.param-row button {
+  white-space: nowrap;
+}
+
+/* ---------------- 相機主卡片（自動寬度）---------------- */
+.cam-big {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: calc(320px * 3 + 32px);
+  margin-left: auto;
+  margin-right: auto;
+
+  padding-left: 12px;  /* ⬅ Camera 內側邊界 */
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+
+/* ---------------- 相機內容（固定三張卡片寬）--------------- */
+.cam-inner {
+  display: flex;
+  gap: 16px;
+  max-width: calc(320px * 3 + 32px);   /* 三卡片 + gap */
+  margin: 0 auto;                      /* 中置 */
+}
+
+.cam-left {
+  flex: 3;
+}
+
+.cam-right {
+  flex: 1;
+}
+
+.cam-left,
+.cam-right {
+  flex-shrink: 0;   /* 避免被壓扁 */
+}
+
+.cam-left img {
+  width: 100%;
+  border-radius: 10px;
+}
+
 </style>
 </head>
 
-
 <body>
+
 <h2>🐍 ESP32 LX-224 控制面板</h2>
 
 <div class="container">
 
-<!-- 🧭 模式切換 -->
-<div class="card">
-  <h3>🧭 模式切換</h3>
-  <button onclick="setMode(0)">Sin 模式</button>
-  <button onclick="setMode(1)">CPG 模式</button>
-  <button onclick="setMode(2)">Offset 模式</button>
-  <p>目前模式：<span id="mode">-</span></p>
+  <!-- 📷 相機畫面 + 控制 -->
+  <div class="card cam-big">
+    <div class="cam-inner">
+      <div class="cam-left">
+        <h3>📷 相機畫面</h3>
+        <img src="/cam">
+      </div>
 
-  <button onclick="toggleFeedback()">切換回授</button>
-  <p>回授狀態：<span id="feedback">-</span></p>
-</div>
+      <div class="cam-right">
+        <h3>🎛 相機控制</h3>
 
-<!-- ⚙️ 控制參數 -->
-<div class="card">
-  <h3>⚙️ 參數設定</h3>
+        <div class="cam-control">
+          <label>解析度：
+            <select onchange="sendCam('framesize',this.value)">
+              <option value="10">UXGA</option>
+              <option value="9">SXGA</option>
+              <option value="8" selected>SVGA</option>
+              <option value="6">VGA</option>
+              <option value="5">CIF</option>
+              <option value="3">QVGA</option>
+            </select>
+          </label>
 
-  <label>頻率 (Hz):
-    <input type="number" step="0.1" id="freqInput">
-  </label><button onclick="setFrequency()">設定</button>
+          <label>畫質：
+            <input type="range" min="4" max="63" value="10"
+                  oninput="sendCam('quality', this.value)">
+          </label>
 
-  <label>振幅 (°):
-    <input type="number" step="1" id="ampInput">
-  </label><button onclick="setAmplitude()">設定</button>
+          <label>亮度：
+            <input type="range" min="-2" max="2" value="0"
+                  oninput="sendCam('brightness', this.value)">
+          </label>
 
-  <label>λ:
-    <input type="number" step="0.05" id="lambdaInput">
-  </label><button onclick="setLambda()">設定</button>
-
-  <label>L:
-    <input type="number" step="0.05" id="Linput">
-  </label><button onclick="setL()">設定</button>
-
-  <label>回授權重:
-    <input type="range" id="fbGain" min="0" max="1" step="0.1"
-    oninput="document.getElementById('fbVal').innerText=this.value">
-  </label>
-  <span id="fbVal">1.0</span>
-  <button onclick="setFeedbackGain()">設定</button>
-</div>
-
-<!-- 📡 狀態監控 -->
-<div class="card" id="status">
-  <h3>📡 系統狀態</h3>
-  <p>頻率：<span id="freq">-</span> Hz</p>
-  <p>振幅：<span id="amp">-</span>°</p>
-  <p>λ：<span id="lambda">-</span></p>
-  <p>L：<span id="L">-</span></p>
-  <p>回授權重：<span id="fbGainStatus">-</span></p>
-</div>
-
-<!-- 📈 ADXL355 -->
-<div class="card">
-  <h3>📈 ADXL355 加速度</h3>
-  <table class="sensor-table">
-    <tr><td>X:</td><td><span id="ax">-</span> g</td></tr>
-    <tr><td>Y:</td><td><span id="ay">-</span> g</td></tr>
-    <tr><td>Z:</td><td><span id="az">-</span> g</td></tr>
-    <tr><td>Pitch:</td><td><span id="pitch">-</span>°</td></tr>
-    <tr><td>Roll:</td><td><span id="roll">-</span>°</td></tr>
-  </table>
-</div>
-
-<!-- 🔌 ADS1115 -->
-<div class="card">
-  <h3>🔌 ADS1115 電壓</h3>
-  <table class="sensor-table">
-    <tr><td>A1-0:</td><td><span id="ads1_0">-</span></td></tr>
-    <tr><td>A1-1:</td><td><span id="ads1_1">-</span></td></tr>
-    <tr><td>A1-2:</td><td><span id="ads1_2">-</span></td></tr>
-    <tr><td>A1-3:</td><td><span id="ads1_3">-</span></td></tr>
-    <tr><td>A2-0:</td><td><span id="ads2_0">-</span></td></tr>
-    <tr><td>A2-1:</td><td><span id="ads2_1">-</span></td></tr>
-    <tr><td>A2-2:</td><td><span id="ads2_2">-</span></td></tr>
-    <tr><td>A2-3:</td><td><span id="ads2_3">-</span></td></tr>
-  </table>
-</div>
-
-<!-- 📷 相機畫面 -->
-<div class="card">
-  <h3>📷 XIAO ESP32S3 相機</h3>
-  <img src="/cam" style="width:100%;border-radius:10px;">
-</div>
-
-<!-- 🎛 相機參數調整 -->
-<div class="card">
-  <h3>🎛 相機控制</h3>
-
-  <div class="cam-control">
-    <label>解析度：
-      <select onchange="sendCam('framesize',this.value)">
-        <option value="10">UXGA</option>
-        <option value="9">SXGA</option>
-        <option value="8" selected>SVGA</option>
-        <option value="6">VGA</option>
-        <option value="5">CIF</option>
-        <option value="3">QVGA</option>
-      </select>
-    </label>
-
-    <label>畫質：
-      <input type="range" min="4" max="63" value="10"
-      oninput="sendCam('quality', this.value)">
-    </label>
-
-    <label>亮度：
-      <input type="range" min="-2" max="2" value="0"
-      oninput="sendCam('brightness', this.value)">
-    </label>
-
-    <label>對比：
-      <input type="range" min="-2" max="2" value="0"
-      oninput="sendCam('contrast', this.value)">
-    </label>
-
-    <label>飽和：
-      <input type="range" min="-2" max="2" value="0"
-      oninput="sendCam('saturation', this.value)">
-    </label>
-
-    <button onclick="sendCam('aec',1)">🌞 自動曝光</button>
-    <button onclick="sendCam('aec',0)">🌑 關閉 AE</button>
-    <button onclick="sendCam('awb',1)">🎨 自動白平衡</button>
-    <button onclick="sendCam('awb',0)">❌ 關閉 AWB</button>
+          <label>對比：
+            <input type="range" min="-2" max="2" value="0"
+                  oninput="sendCam('contrast', this.value)">
+          </label>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- 🕒 系統控制 -->
-<div class="card">
-  <h3>🕒 系統控制</h3>
-  <p>運作時間：<span id="uptime">00:00</span></p>
-  <button onclick="togglePause()">⏸ 暫停 / ▶️ 繼續</button>
-  <button onclick="downloadCSV()">📥 下載 CSV</button>
-</div>
+<div class="flex-wrap">
+  <!-- 🧭 模式切換 -->
+  <div class="card">
+    <h3>🧭 模式切換</h3>
+    <button onclick="setMode(0)">Sin 模式</button>
+    <button onclick="setMode(1)">CPG 模式</button>
+    <button onclick="setMode(2)">Offset 模式</button>
+    <p>目前模式：<span id="mode">-</span></p>
 
-</div> <!-- container END -->
+    <button onclick="toggleFeedback()">切換回授</button>
+    <p>回授狀態：<span id="feedback">-</span></p>
+  </div>
+
+  <!-- ⚙️ 參數設定 -->
+  <div class="card">
+    <h3>⚙️ 參數設定</h3>
+
+    <div class="param-row">
+      <label>頻率 (Hz):</label>
+      <input type="number" step="0.1" id="freqInput">
+      <button onclick="setFrequency()">設定</button>
+    </div>
+
+    <div class="param-row">
+      <label>振幅 (°):</label>
+      <input type="number" step="1" id="ampInput">
+      <button onclick="setAmplitude()">設定</button>
+    </div>
+
+    <div class="param-row">
+      <label>λ:</label>
+      <input type="number" step="0.05" id="lambdaInput">
+      <button onclick="setLambda()">設定</button>
+    </div>
+
+    <div class="param-row">
+      <label>L:</label>
+      <input type="number" step="0.05" id="Linput">
+      <button onclick="setL()">設定</button>
+    </div>
+
+    <div class="param-row">
+      <label>回授權重:</label>
+      <input type="range" id="fbGain" min="0" max="1" step="0.1"
+            oninput="document.getElementById('fbVal').innerText=this.value">
+      <span id="fbVal" style="margin-left:8px;">1.0</span>
+      <button onclick="setFeedbackGain()">設定</button>
+    </div>
+  </div>
+
+  <!-- 📡 狀態監控 -->
+  <div class="card" id="status">
+    <h3>📡 系統狀態</h3>
+    <p>頻率：<span id="freq">-</span> Hz</p>
+    <p>振幅：<span id="amp">-</span>°</p>
+    <p>λ：<span id="lambda">-</span></p>
+    <p>L：<span id="L">-</span></p>
+    <p>回授權重：<span id="fbGainStatus">-</span></p>
+  </div>
+
+  <!-- 📈 ADXL355 -->
+  <div class="card">
+    <h3>📈 ADXL355 加速度</h3>
+    <table class="sensor-table">
+      <tr><td>X:</td><td><span id="ax">-</span> g</td></tr>
+      <tr><td>Y:</td><td><span id="ay">-</span> g</td></tr>
+      <tr><td>Z:</td><td><span id="az">-</span> g</td></tr>
+      <tr><td>Pitch:</td><td><span id="pitch">-</span>°</td></tr>
+      <tr><td>Roll:</td><td><span id="roll">-</span>°</td></tr>
+    </table>
+  </div>
+
+  <!-- 🔌 ADS1115 -->
+  <div class="card">
+    <h3>🔌 ADS1115 電壓</h3>
+    <table class="sensor-table">
+      <tr><td>A1-0:</td><td><span id="ads1_0">-</span></td></tr>
+      <tr><td>A1-1:</td><td><span id="ads1_1">-</span></td></tr>
+      <tr><td>A1-2:</td><td><span id="ads1_2">-</span></td></tr>
+      <tr><td>A1-3:</td><td><span id="ads1_3">-</span></td></tr>
+      <tr><td>A2-0:</td><td><span id="ads2_0">-</span></td></tr>
+      <tr><td>A2-1:</td><td><span id="ads2_1">-</span></td></tr>
+      <tr><td>A2-2:</td><td><span id="ads2_2">-</span></td></tr>
+      <tr><td>A2-3:</td><td><span id="ads2_3">-</span></td></tr>
+    </table>
+  </div>
+
+  <!-- 🌐 WiFi 設定 -->
+  <div class="card">
+    <h3>🌐 WiFi 設定</h3>
+
+    <button onclick="scanWiFi()" id="scanBtn">🔍 掃描附近 WiFi</button>
+    <h4>📡 目前連線：</h4>
+    <div id="wifiCurrent">讀取中...</div>
+    <br>
+    <h4 style="cursor:pointer;" onclick="toggleScanMenu()">📶 附近 WiFi（展開/收合）</h4>
+      <div id="scanMenu" style="display:none;">
+        <ul id="wifiScanList" style="list-style:none; padding-left:0;"></ul>
+      </div>
+
+    <h4 style="cursor:pointer;" onclick="toggleSavedMenu()">📁 已儲存 WiFi（展開/收合）</h4>
+      <div id="savedMenu" style="display:none;">
+        <ul id="wifiSavedList" style="list-style:none; padding-left:0;"></ul>
+      </div>
+
+    <div id="popupBg">
+      <div id="wifiPopup">
+        <h3 id="popupTitle">WiFi 操作</h3>
+        <p>密碼：<input type="password" id="popupPass" style="width:100%;"></p>
+        <button onclick="confirmConnectWiFi()" style="width:100%; margin-top:6px;">▶️ 連線</button>
+        <button onclick="saveNewPassword()" id="editBtn" style="width:100%; margin-top:6px; background:#28a745; display:none;">✏️ 修改密碼</button>
+        <button onclick="closePopup()" style="width:100%; margin-top:6px;">❌ 取消</button>
+      </div>
+    </div>
+
+    <p id="wifiStatus">狀態：-</p>
+  </div>
+
+  <!-- 🕒 控制 -->
+  <div class="card">
+    <h3>🕒 系統控制</h3>
+    <p>運作時間：<span id="uptime">-</span></p>
+    <button onclick="togglePause()">⏸ 暫停 / ▶️ 繼續</button>
+    <button onclick="downloadCSV()">📥 下載 CSV</button>
+  </div>
+
+</div> 
 
 <script>
 function sendCam(v,val){ fetch(`/cam_control?var=${v}&val=${val}`); }
@@ -262,12 +412,171 @@ function refreshStatus(){
     roll.innerText=j.roll_deg.toFixed(2);
     for(let i=0;i<4;i++) eval(`ads1_${i}.innerText=j.ads1_ch${i}.toFixed(3)`);
     for(let i=0;i<4;i++) eval(`ads2_${i}.innerText=j.ads2_ch${i}.toFixed(3)`);
-    uptime.innerText = j.uptime_min.toFixed(1)+" min";
+    uptime.innerText = `${j.uptime_min}:${j.uptime_sec.toString().padStart(2,'0')}`;
   });
 }
+
+let selectedSSID="";
+let editMode=false;
+
+function wifiBars(rssi){
+  if (rssi >= -50) return "📶📶📶📶";
+  if (rssi >= -60) return "📶📶📶";
+  if (rssi >= -70) return "📶📶";
+  return "📶";
+}
+
+function scanWiFi(){
+  document.getElementById("scanMenu").style.display = "block";
+
+  wifiScanList.innerHTML = "<li>⏳ 掃描中...</li>";
+  scanBtn.innerText = "⏳ 掃描中…";
+
+  Promise.all([
+    fetch('/wifi_current').then(r=>r.json()),
+    fetch('/wifi_scan').then(r=>r.json())
+  ])
+  .then(([cur,scan])=>{
+    let html="";
+    scan.wifi.sort((a,b)=>b.rssi-a.rssi);
+
+    scan.wifi.forEach(w=>{
+      if(cur.connected && w.ssid===cur.ssid) return;
+
+      html += `
+        <li class="wifi-item">
+          <div class="wifi-left">${wifiBars(w.rssi)} ${w.ssid || "(隱藏網路)"}</div>
+          <button class="wifi-btn wifi-btn-go" onclick="showPopup('${w.ssid}',false)">➡️</button>
+        </li>
+      `;
+    });
+
+    wifiScanList.innerHTML = html;
+    scanBtn.innerText = "🔍 重新掃描";
+  });
+}
+
+function loadSavedWiFi(){
+  fetch('/wifi_saved')
+    .then(r=>r.json())
+    .then(j=>{
+      let html = "";
+
+      j.saved.forEach(w=>{
+        html += `
+        <li class="wifi-item">
+          <div class="wifi-left">⭐ ${w.ssid}</div>
+          <div>
+            <button class="wifi-btn wifi-btn-go" onclick="quickReconnect('${w.ssid}')">重連</button>
+            <button class="wifi-btn wifi-btn-edit" onclick="showPopup('${w.ssid}',true)">✏️</button>
+            <button class="wifi-btn wifi-btn-del" onclick="forgetWiFi('${w.ssid}')">🗑</button>
+          </div>
+        </li>`;
+      });
+
+      wifiSavedList.innerHTML = html;
+    });
+}
+
+function quickReconnect(ssid){
+  wifiStatus.innerText="⏳ 嘗試快速重連…";
+
+  fetch(`/wifi_reconnect?ssid=${encodeURIComponent(ssid)}`)
+    .then(r=>r.text())
+    .then(t=>{ wifiStatus.innerText=t; });
+}
+
+function showPopup(ssid,isEdit){
+  selectedSSID=ssid;
+  editMode=isEdit;
+
+  popupTitle.innerText = isEdit ? `修改密碼：${ssid}` : `連線到：${ssid}`;
+  popupPass.value="";
+  document.getElementById("editBtn").style.display = isEdit ? "block" : "none";
+
+  popupBg.style.display="block";
+}
+
+function closePopup(){
+  popupBg.style.display="none";
+}
+
+function confirmConnectWiFi(){
+  const pass = popupPass.value.trim();
+  wifiStatus.innerText = "⏳ 嘗試連線中…";
+
+  fetch(`/wifi_connect?ssid=${encodeURIComponent(selectedSSID)}&pass=${encodeURIComponent(pass)}`)
+    .then(r=>r.text())
+    .then(t=>{
+      wifiStatus.innerText=t;
+      loadSavedWiFi();
+    });
+
+  closePopup();
+}
+
+function saveNewPassword(){
+  const pass = popupPass.value.trim();
+  wifiStatus.innerText="⏳ 儲存密碼…";
+
+  fetch(`/wifi_edit_pass?ssid=${encodeURIComponent(selectedSSID)}&pass=${encodeURIComponent(pass)}`)
+    .then(r=>r.text())
+    .then(t=>{
+      wifiStatus.innerText=t;
+      loadSavedWiFi();
+    });
+
+  closePopup();
+}
+
+function forgetWiFi(ssid){
+  fetch(`/wifi_forget?ssid=${encodeURIComponent(ssid)}`)
+    .then(r=>r.text())
+    .then(t=>{
+      wifiStatus.innerText=t;
+      loadSavedWiFi();
+    });
+}
+
+function loadCurrentWiFi(){
+  fetch('/wifi_current')
+    .then(r=>r.json())
+    .then(j=>{
+      if (!j.connected){
+        wifiCurrent.innerText = "尚未連線任何 WiFi";
+        return;
+      }
+
+      wifiCurrent.innerHTML = `
+        ⭐ SSID：${j.ssid}<br>
+        📶 訊號：${wifiBars(j.rssi)}<br>
+        🌐 IP：${j.ip}
+      `;
+    });
+}
+
+function toggleSavedMenu(){
+  const menu = document.getElementById("savedMenu");
+  menu.style.display = (menu.style.display === "none") ? "block" : "none";
+}
+
+function toggleScanMenu(){
+  const menu = document.getElementById("scanMenu");
+  menu.style.display = (menu.style.display === "none") ? "block" : "none";
+}
+
+setTimeout(()=>{
+  loadCurrentWiFi();
+  loadSavedWiFi();
+  scanWiFi();
+},200);
+
+
+
 setInterval(refreshStatus,1000);
 </script>
 
 </body>
 </html>
 )rawliteral";
+
