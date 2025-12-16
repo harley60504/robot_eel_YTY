@@ -306,6 +306,7 @@ server.on("/wifi_current", []() {
     doc["L"] = L;
     doc["fbGain"] = feedbackGain;
 
+<<<<<<< Updated upstream:robot_eel/src/main/main/web_ui.h
     // doc["adxl_x_g"] = adxlX;
     // doc["adxl_y_g"] = adxlY;
     // doc["adxl_z_g"] = adxlZ;
@@ -329,6 +330,9 @@ server.on("/wifi_current", []() {
       doc["ads1_ch" + String(i)] = 0;
       doc["ads2_ch" + String(i)] = 0;
     }
+=======
+
+>>>>>>> Stashed changes:robot_eel/src/main/web_ui.h
 
     // 🕒 分鐘 + 秒
     unsigned long ms = millis();

@@ -318,32 +318,6 @@ button:hover { background: #0059c4; }
     <p>回授權重：<span id="fbGainStatus">-</span></p>
   </div>
 
-  <!-- 📈 ADXL355 -->
-  <div class="card">
-    <h3>📈 ADXL355 加速度</h3>
-    <table class="sensor-table">
-      <tr><td>X:</td><td><span id="ax">-</span> g</td></tr>
-      <tr><td>Y:</td><td><span id="ay">-</span> g</td></tr>
-      <tr><td>Z:</td><td><span id="az">-</span> g</td></tr>
-      <tr><td>Pitch:</td><td><span id="pitch">-</span>°</td></tr>
-      <tr><td>Roll:</td><td><span id="roll">-</span>°</td></tr>
-    </table>
-  </div>
-
-  <!-- 🔌 ADS1115 -->
-  <div class="card">
-    <h3>🔌 ADS1115 電壓</h3>
-    <table class="sensor-table">
-      <tr><td>A1-0:</td><td><span id="ads1_0">-</span></td></tr>
-      <tr><td>A1-1:</td><td><span id="ads1_1">-</span></td></tr>
-      <tr><td>A1-2:</td><td><span id="ads1_2">-</span></td></tr>
-      <tr><td>A1-3:</td><td><span id="ads1_3">-</span></td></tr>
-      <tr><td>A2-0:</td><td><span id="ads2_0">-</span></td></tr>
-      <tr><td>A2-1:</td><td><span id="ads2_1">-</span></td></tr>
-      <tr><td>A2-2:</td><td><span id="ads2_2">-</span></td></tr>
-      <tr><td>A2-3:</td><td><span id="ads2_3">-</span></td></tr>
-    </table>
-  </div>
 
   <!-- 🌐 WiFi 設定 -->
   <div class="card">
@@ -405,13 +379,6 @@ function refreshStatus(){
     lambda.innerText=j.lambda.toFixed(2);
     L.innerText=j.L.toFixed(2);
     fbGainStatus.innerText=j.fbGain.toFixed(2);
-    ax.innerText=j.adxl_x_g.toFixed(3);
-    ay.innerText=j.adxl_y_g.toFixed(3);
-    az.innerText=j.adxl_z_g.toFixed(3);
-    pitch.innerText=j.pitch_deg.toFixed(2);
-    roll.innerText=j.roll_deg.toFixed(2);
-    for(let i=0;i<4;i++) eval(`ads1_${i}.innerText=j.ads1_ch${i}.toFixed(3)`);
-    for(let i=0;i<4;i++) eval(`ads2_${i}.innerText=j.ads2_ch${i}.toFixed(3)`);
     uptime.innerText = `${j.uptime_min}:${j.uptime_sec.toString().padStart(2,'0')}`;
   });
 }

@@ -1,6 +1,12 @@
 #include <Arduino.h>
 #include "config.h"
 #include "utils.h"
+<<<<<<< Updated upstream
+=======
+#include "wifi_mgr.h"
+#include "index_html.h"
+#include "web_ui.h"
+>>>>>>> Stashed changes
 #include "cpg.h"
 #include "servo.h"
 #include "ctrl_uart.h"
@@ -36,6 +42,7 @@ void servoTask(void *param)
     uint32_t lastMicros = micros();
     float t = 0;
 
+<<<<<<< Updated upstream
     while (true)
     {
         if (!isPaused)
@@ -44,6 +51,8 @@ void servoTask(void *param)
             float dt = (now - lastMicros) * 1e-6f;
             lastMicros = now;
             t += dt;
+=======
+>>>>>>> Stashed changes
 
             // ========== CPG 模式 ==========
             if (controlMode == 1)
@@ -54,6 +63,7 @@ void servoTask(void *param)
             {
                 float outDeg = 0.0f;
 
+<<<<<<< Updated upstream
                 if (controlMode == 0) {                 // Sin 模式
                     float phase = j / fmaxf(lambda * L, 1e-6f);
                     outDeg = Ajoint * sinf(2 * PI * frequency * t + phase);
@@ -66,6 +76,10 @@ void servoTask(void *param)
                 }
 
                 angleDeg[j] = servoDefaultAngles[j] + outDeg;
+=======
+
+  connectToWiFi();
+>>>>>>> Stashed changes
 
                 // 寫入 LX-224
                 int pos = degreeToLX224(angleDeg[j]);
@@ -73,8 +87,14 @@ void servoTask(void *param)
             }
         }
 
+<<<<<<< Updated upstream
         vTaskDelay(delayTick);
     }
+=======
+  initCPG();
+
+  xTaskCreatePinnedToCore(servoTask, "ServoTask", 4096, NULL, 1, NULL, 1);
+>>>>>>> Stashed changes
 }
 
 
