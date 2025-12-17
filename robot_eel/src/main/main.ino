@@ -34,7 +34,7 @@ float lambda = 0.7f;
 float L = 0.85f;
 float adsMinValidVoltage = 0.6f;
 bool  isPaused = false;
-int   controlMode = 0;
+int   controlMode = 2;
 bool  useFeedback = false;
 float feedbackGain = 1.0f;
 
@@ -51,16 +51,9 @@ void setup() {
   delay(1000);
   Serial.println("✅ 原生 USB 已啟動");
 
-  Serial1.begin(115200, SERIAL_8N1, -1, SERVO_TX_PIN);
+  Serial1.begin(115200, SERIAL_8N1, SERVO_RX_PIN, SERVO_TX_PIN);
 
-  Wire.begin(SDA_PIN, SCL_PIN);
-  Wire.setTimeout(50);
-  if (!ads1.begin(0x48, &Wire)) Serial.println("❌ 找不到 ADS1115 #1 (0x48)");
-  else { ads1.setGain(GAIN_TWOTHIRDS); Serial.println("✅ ADS1115 #1 初始化完成"); }
-  if (!ads2.begin(0x49, &Wire)) Serial.println("❌ 找不到 ADS1115 #2 (0x49)");
-  else { ads2.setGain(GAIN_TWOTHIRDS); Serial.println("✅ ADS1115 #2 初始化完成"); }
 
-  initLogFile();
   connectToWiFi();
 
   setupWebServer();
@@ -79,4 +72,5 @@ void setup() {
 
 void loop() {
   server.handleClient();
+  logServoErrorAvgPerMinute();   // ★ 每分鐘寫平均誤差
 }

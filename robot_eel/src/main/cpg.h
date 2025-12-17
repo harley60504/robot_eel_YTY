@@ -22,14 +22,6 @@ inline float getCPGOutput(int j) {
   return Ajoint * cpg[j].r * cosf(cpg[j].theta);
 }
 
-inline float getSensorAngle(int j) {
-  float v = adsVoltage1[j % 4];
-  if (v < adsMinValidVoltage) v = 0.0f;
-  const float in_min = 3.16f;
-  const float in_max = 2.26f;
-  float angle = clampf(linmap(v, in_min, in_max, 0.0f, 90.0f), 0.0f, 180.0f);
-  return angle;
-}
 
 inline float getLambdaInput() { return lambda * L; }
 inline float getTargetDelta() { return 1.0f / getLambdaInput(); }

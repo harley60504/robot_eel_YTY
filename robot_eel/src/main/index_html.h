@@ -205,6 +205,30 @@ button:hover { background: #0059c4; }
   width: 100%;
   border-radius: 10px;
 }
+/* ---------------- Servo Error Table ---------------- */
+.servo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.servo-table th {
+  background: #f1f4f8;
+  padding: 6px;
+  font-weight: 600;
+  border-bottom: 2px solid #007bff;
+  text-align: center;
+}
+
+.servo-table td {
+  padding: 5px 6px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+}
+
+.servo-ok   { color: #28a745; font-weight: 600; }
+.servo-warn { color: #ffc107; font-weight: 600; }
+.servo-bad  { color: #dc3545; font-weight: 700; }
 
 </style>
 </head>
@@ -316,6 +340,24 @@ button:hover { background: #0059c4; }
     <p>λ：<span id="lambda">-</span></p>
     <p>L：<span id="L">-</span></p>
     <p>回授權重：<span id="fbGainStatus">-</span></p>
+  </div>
+  <!-- 🦾 Servo 角度誤差 -->
+  <div class="card">
+    <h3>🦾 Servo 角度誤差</h3>
+
+    <table class="servo-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Target (°)</th>
+          <th>Actual (°)</th>
+          <th>Error (°)</th>
+        </tr>
+      </thead>
+      <tbody id="servoTable">
+        <tr><td colspan="4">讀取中…</td></tr>
+      </tbody>
+    </table>
   </div>
 
 
@@ -532,6 +574,33 @@ function toggleScanMenu(){
   menu.style.display = (menu.style.display === "none") ? "block" : "none";
 }
 
+async function updateServoTable() {
+  try {
+    const r = await fetch('/servo_status');
+    const j = await r.json();
+    const tb = document.getElementById('servoTable');
+    tb.innerHTML = '';
+
+    j.servos.forEach(s => {
+      const err = Math.abs(s.errorDeg);
+      let cls = 'servo-ok';
+      if (err > 5) cls = 'servo-bad';
+      else if (err > 2) cls = 'servo-warn';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${s.id}</td>
+        <td>${s.targetDeg.toFixed(1)}</td>
+        <td>${s.actualDeg.toFixed(1)}</td>
+        <td class="${cls}">${s.errorDeg.toFixed(2)}</td>
+      `;
+      tb.appendChild(tr);
+    });
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 setTimeout(()=>{
   loadCurrentWiFi();
   loadSavedWiFi();
@@ -539,7 +608,7 @@ setTimeout(()=>{
 },200);
 
 
-
+setInterval(updateServoTable, 500);
 setInterval(refreshStatus,1000);
 </script>
 

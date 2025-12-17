@@ -1,22 +1,29 @@
 #pragma once
 #include <Arduino.h>
 #include <WebServer.h>
-#include <Adafruit_ADS1X15.h>
-#include <PL_ADXL355.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-// LX-224
+// =====================================================
+// LX-224 Servo
+// =====================================================
 #define SERVO_TX_PIN 43
-#define CMD_MOVE_TIME_WRITE 0x01
+#define SERVO_RX_PIN 44
 #define HEADER 0x55
+
+#define CMD_MOVE_TIME_WRITE 0x01
+#define CMD_READ_POS        0x15
+#define CMD_ID_WRITE        0x13
+
 #define BROADCAST_ID 0xFE
-#define CMD_ID_WRITE 0x13
+
 #define bodyNum 6
 
-
+// =====================================================
+// CPG oscillator
+// =====================================================
 struct HopfOscillator {
   float r;
   float theta;
@@ -24,30 +31,35 @@ struct HopfOscillator {
   float mu;
 };
 
+// =====================================================
+// Web
+// =====================================================
 extern WebServer server;
 
+// =====================================================
 // WiFi
+// =====================================================
 extern const char* AP_SSID;
 extern const char* AP_PASS;
 extern const char* HOSTNAME;
 
-
-// Servo / params
+// =====================================================
+// Servo / Control parameters
+// =====================================================
 extern float servoDefaultAngles[bodyNum];
 extern float angleDeg[bodyNum];
+
 extern float Ajoint;
 extern float frequency;
 extern float lambda;
 extern float L;
-extern float adsMinValidVoltage;
+
 extern bool  isPaused;
 extern int   controlMode;
 extern bool  useFeedback;
 extern float feedbackGain;
 
-// CPG
+// =====================================================
+// CPG state
+// =====================================================
 extern HopfOscillator cpg[bodyNum];
-
-
-// forward decl
-void logADSDataEveryMinute();

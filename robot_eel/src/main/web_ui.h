@@ -315,7 +315,25 @@ server.on("/wifi_current", []() {
     serializeJson(doc, out);
     server.send(200, "application/json", out);
   });
+  // ==========================================
+  // Servo angle / error status
+  // ==========================================
+  server.on("/servo_status", []() {
+    DynamicJsonDocument doc(2048);
+    JsonArray arr = doc.createNestedArray("servos");
 
+    for (int i = 0; i < bodyNum; i++) {
+      JsonObject o = arr.createNestedObject();
+      o["id"]        = i;
+      o["targetDeg"] = servoState[i].targetDeg;
+      o["actualDeg"] = servoState[i].actualDeg;
+      o["errorDeg"]  = servoState[i].errorDeg;
+    }
+
+    String out;
+    serializeJson(doc, out);
+    server.send(200, "application/json", out);
+});
   // ==========================================
   // CSV download
   // ==========================================
