@@ -1,224 +1,82 @@
 #include <Arduino.h>
+#include <WiFi.h>
+#include <ESPmDNS.h>
+#include <WebServer.h>
+#include "esp_wifi.h"
+#include <FS.h>
+#include <SPIFFS.h>
+#include <Wire.h>
+#include <SPI.h>
+
 #include "config.h"
 #include "utils.h"
-<<<<<<< Updated upstream
-=======
 #include "wifi_mgr.h"
 #include "index_html.h"
 #include "web_ui.h"
->>>>>>> Stashed changes
+#include "logging.h"
 #include "cpg.h"
 #include "servo.h"
-#include "ctrl_uart.h"
-#include "status.h"
 
-// -----------------------------
-// Robot parameters（在 main 定義全域變數）
-// -----------------------------
+WebServer server(80);
+
+// WiFi
+const char* AP_SSID = "ESP32_Controller_AP";
+const char* AP_PASS = "12345678";
+const char* HOSTNAME = "esp32-controller";
+String connectedSSID = "未連接";
+
+// Servo / params
 float servoDefaultAngles[bodyNum] = {120,120,120,120,120,120};
 float angleDeg[bodyNum];
-
-float Ajoint       = 20.0f;
-float frequency    = 0.7f;
-float lambda       = 0.7f;
-float L            = 0.85f;
-
-bool  isPaused     = false;
-int   controlMode  = 2;     // 0=Sin, 1=CPG, 2=Offset
-bool  useFeedback  = false;
+float Ajoint = 20.0f;
+float frequency = 0.7f;
+float lambda = 0.7f;
+float L = 0.85f;
+float adsMinValidVoltage = 0.6f;
+bool  isPaused = false;
+int   controlMode = 0;
+bool  useFeedback = false;
 float feedbackGain = 1.0f;
 
-// CPG 陣列
+// CPG
 HopfOscillator cpg[bodyNum];
 
 
-// =======================================================
-//  Servo Task
-//  - 控制伺服器，永不被 WiFi / UART 卡住（固定 Core 1）
-// =======================================================
-void servoTask(void *param)
-{
-    TickType_t delayTick = 20 / portTICK_PERIOD_MS;  // 50Hz
-    uint32_t lastMicros = micros();
-    float t = 0;
+// Logging
+unsigned long g_lastLogTime = 0;
 
-<<<<<<< Updated upstream
-    while (true)
-    {
-        if (!isPaused)
-        {
-            uint32_t now = micros();
-            float dt = (now - lastMicros) * 1e-6f;
-            lastMicros = now;
-            t += dt;
-=======
->>>>>>> Stashed changes
 
-            // ========== CPG 模式 ==========
-            if (controlMode == 1)
-                updateAllCPG(t, dt);
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("✅ 原生 USB 已啟動");
 
-            // ======== 更新所有伺服角度 ========
-            for (int j = 0; j < bodyNum; j++)
-            {
-                float outDeg = 0.0f;
+  Serial1.begin(115200, SERIAL_8N1, -1, SERVO_TX_PIN);
 
-<<<<<<< Updated upstream
-                if (controlMode == 0) {                 // Sin 模式
-                    float phase = j / fmaxf(lambda * L, 1e-6f);
-                    outDeg = Ajoint * sinf(2 * PI * frequency * t + phase);
-                }
-                else if (controlMode == 1) {            // CPG 模式
-                    outDeg = getCPGOutput(j);
-                }
-                else {                                  // OFFSET 模式
-                    outDeg = 0;
-                }
+  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.setTimeout(50);
+  if (!ads1.begin(0x48, &Wire)) Serial.println("❌ 找不到 ADS1115 #1 (0x48)");
+  else { ads1.setGain(GAIN_TWOTHIRDS); Serial.println("✅ ADS1115 #1 初始化完成"); }
+  if (!ads2.begin(0x49, &Wire)) Serial.println("❌ 找不到 ADS1115 #2 (0x49)");
+  else { ads2.setGain(GAIN_TWOTHIRDS); Serial.println("✅ ADS1115 #2 初始化完成"); }
 
-                angleDeg[j] = servoDefaultAngles[j] + outDeg;
-=======
-
+  initLogFile();
   connectToWiFi();
->>>>>>> Stashed changes
 
-                // 寫入 LX-224
-                int pos = degreeToLX224(angleDeg[j]);
-                moveLX224(j + 1, pos, 15);
-            }
-        }
+  setupWebServer();
+  Serial.printf("🌐 Web 伺服器啟動：AP http://%s  ",
+                WiFi.softAPIP().toString().c_str());
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("|  STA http://%s\n", WiFi.localIP().toString().c_str());
+  } else {
+    Serial.println("|  STA 未連線");
+  }
 
-<<<<<<< Updated upstream
-        vTaskDelay(delayTick);
-    }
-=======
   initCPG();
 
   xTaskCreatePinnedToCore(servoTask, "ServoTask", 4096, NULL, 1, NULL, 1);
->>>>>>> Stashed changes
 }
 
-
-// =======================================================
-// UART Rx Task（解析 Camera 端指令）
-// =======================================================
-void uartRxTask(void *param)
-{
-    uint8_t cmd = 0;
-    uint8_t *payload = nullptr;
-    uint8_t len = 0;
-
-    while (true)
-    {
-        if (ctrl_uart::readPacket(cmd, payload, len))
-        {
-            switch (cmd)
-            {
-                case 0x10:    // setMode
-                    if (len == 1) {
-                        controlMode = payload[0];
-                        if (controlMode == 1) initCPG();
-                        Serial.printf("[UART] Mode = %d\n", controlMode);
-                    }
-                    break;
-
-                case 0x11:    // setAmplitude
-                    if (len == 4) memcpy(&Ajoint, payload, 4);
-                    Serial.printf("[UART] Amplitude = %.2f\n", Ajoint);
-                    break;
-
-                case 0x12:    // setFrequency
-                    if (len == 4) memcpy(&frequency, payload, 4);
-                    Serial.printf("[UART] Frequency = %.2f\n", frequency);
-                    break;
-
-                case 0x13:    // setLambda
-                    if (len == 4) memcpy(&lambda, payload, 4);
-                    Serial.printf("[UART] Lambda = %.2f\n", lambda);
-                    break;
-
-                case 0x14:    // setL
-                    if (len == 4) memcpy(&L, payload, 4);
-                    Serial.printf("[UART] L = %.2f\n", L);
-                    break;
-
-                case 0x15:    // setFeedbackGain
-                    if (len == 4) memcpy(&feedbackGain, payload, 4);
-                    Serial.printf("[UART] fbGain = %.2f\n", feedbackGain);
-                    break;
-
-                case 0x16:    // toggleFeedback
-                    useFeedback = !useFeedback;
-                    Serial.printf("[UART] Feedback = %d\n", useFeedback);
-                    break;
-
-                case 0x17:    // togglePause
-                    isPaused = !isPaused;
-                    Serial.printf("[UART] Pause = %d\n", isPaused);
-                    break;
-
-                default:
-                    Serial.printf("[UART] Unknown cmd %02X\n", cmd);
-                    break;
-            }
-        }
-
-        vTaskDelay(2);
-    }
+void loop() {
+  server.handleClient();
 }
-
-
-
-// =======================================================
-// Status Task（每秒回傳兩種資料）
-//   CMD=0x30 → 基礎參數
-//   CMD=0x40 → Servo 真實角度/誤差
-// =======================================================
-void statusTask(void *param)
-{
-    while (true) {
-        sendStatus();
-        sendServoStatus();
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-}
-
-
-
-// =======================================================
-// Setup
-// =======================================================
-void setup()
-{
-    Serial.begin(115200);
-    delay(300);
-
-    // Servo UART（RS485）
-    Serial1.begin(115200, SERIAL_8N1, 43, 44);
-    // uart_set_mode(UART_NUM_1, UART_MODE_RS485_HALF_DUPLEX);
-
-    // Camera UART
-    ctrl_uart::begin();
-
-    // 初始化 CPG
-    initCPG();
-
-    // ---- Servo Task → Core 1 ----
-    xTaskCreatePinnedToCore(
-        servoTask, "ServoTask", 4096, NULL, 2, NULL, 1);
-
-    // ---- UART Rx Task → Core 0 ----
-    xTaskCreatePinnedToCore(
-        uartRxTask, "UartRx", 4096, NULL, 1, NULL, 0);
-
-    // ---- Status Task → Core 0 ----
-    xTaskCreatePinnedToCore(
-        statusTask, "StatusTask", 4096, NULL, 1, NULL, 0);
-
-    Serial.println("A-Board Controller Ready.");
-}
-
-
-// =======================================================
-// Loop（空著）
-// =======================================================
-void loop() {}

@@ -1,22 +1,45 @@
 #pragma once
 #include <Arduino.h>
+#include <WebServer.h>
+#include <Adafruit_ADS1X15.h>
+#include <PL_ADXL355.h>
 
-#define bodyNum 6  // 六顆 LX224
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+// LX-224
+#define SERVO_TX_PIN 43
+#define CMD_MOVE_TIME_WRITE 0x01
+#define HEADER 0x55
+#define BROADCAST_ID 0xFE
+#define CMD_ID_WRITE 0x13
+#define bodyNum 6
+
 
 struct HopfOscillator {
-    float r;
-    float theta;
-    float alpha;
-    float mu;
+  float r;
+  float theta;
+  float alpha;
+  float mu;
 };
 
-// Robot parameters
+extern WebServer server;
+
+// WiFi
+extern const char* AP_SSID;
+extern const char* AP_PASS;
+extern const char* HOSTNAME;
+
+
+// Servo / params
 extern float servoDefaultAngles[bodyNum];
 extern float angleDeg[bodyNum];
 extern float Ajoint;
 extern float frequency;
 extern float lambda;
 extern float L;
+extern float adsMinValidVoltage;
 extern bool  isPaused;
 extern int   controlMode;
 extern bool  useFeedback;
@@ -25,18 +48,6 @@ extern float feedbackGain;
 // CPG
 extern HopfOscillator cpg[bodyNum];
 
-// =====================================================
-// LX224 Servo Protocol Definitions
-// =====================================================
 
-// 封包 Header
-#define HEADER 0x55
-
-// LX224 指令碼（依 LewanSoul / LX 系列通用協議）
-#define CMD_MOVE_TIME_WRITE        0x01  // 設定位置 + 時間
-#define CMD_MOVE_TIME_READ         0x02
-#define CMD_MOVE_TIME_WAIT_WRITE   0x07
-#define CMD_MOVE_TIME_WAIT_READ    0x08
-
-#define CMD_ID_WRITE               0x13  // 設定 Servo ID
-#define CMD_READ_POS               0x15  // 讀取目前位置
+// forward decl
+void logADSDataEveryMinute();

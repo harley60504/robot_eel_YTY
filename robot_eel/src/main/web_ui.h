@@ -306,34 +306,6 @@ server.on("/wifi_current", []() {
     doc["L"] = L;
     doc["fbGain"] = feedbackGain;
 
-<<<<<<< Updated upstream:robot_eel/src/main/main/web_ui.h
-    // doc["adxl_x_g"] = adxlX;
-    // doc["adxl_y_g"] = adxlY;
-    // doc["adxl_z_g"] = adxlZ;
-    // doc["pitch_deg"] = pitchDeg;
-    // doc["roll_deg"] = rollDeg;
-
-    // // ★ 修正：符合前端命名方式
-    // for (int i = 0; i < 4; i++) {
-    //   doc["ads1_ch" + String(i)] = adsVoltage1[i];
-    // }
-    //   doc["ads2_ch" + String(i)] = adsVoltage2[i];
-    // }
-
-    doc["adxl_x_g"] = 0;
-    doc["adxl_y_g"] = 0;
-    doc["adxl_z_g"] = 0;
-    doc["pitch_deg"] = 0;
-    doc["roll_deg"] = 0;
-
-    for (int i = 0; i < 4; i++) {
-      doc["ads1_ch" + String(i)] = 0;
-      doc["ads2_ch" + String(i)] = 0;
-    }
-=======
-
->>>>>>> Stashed changes:robot_eel/src/main/web_ui.h
-
     // 🕒 分鐘 + 秒
     unsigned long ms = millis();
     doc["uptime_min"] = ms / 60000;         // 整數分鐘
