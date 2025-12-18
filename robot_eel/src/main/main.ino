@@ -73,20 +73,11 @@ void setup() {
     "servoTask",
     4096,
     nullptr,
-    2,        // servo 優先度高
+    1,        // servo 優先度高
     nullptr,
-    0
+    1
   );
 
-  // xTaskCreatePinnedToCore(
-  //   readservoTask,
-  //   "readservoTask",
-  //   4096,
-  //   nullptr,
-  //   1,   
-  //   nullptr,
-  //   1
-  // );
 }
 
 void loop() {

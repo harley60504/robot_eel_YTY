@@ -1,77 +1,74 @@
-#pragma once
-#include <math.h>
-#include "config.h"
-#include "utils.h"
-#include "cpg.h"
-
-
-void servoTask(void *pv) {
+void servoTask(void *pv)
+{
   const float dt = 0.05f;
+  uint32_t lastWake = xTaskGetTickCount();
 
-  for (;;) {
-    if (!isPaused) {
+  static uint32_t loopCount = 0;
+  static int readIndex = 0;   // 輪流讀哪一顆 servo
+
+  for (;;)
+  {
+    if (!isPaused)
+    {
       float t = millis() / 1000.0f;
 
-      for (int j = 0; j < bodyNum; j++) {
+      /* ========= 1. 先寫入所有 servo（控制主流程） ========= */
+      for (int j = 0; j < bodyNum; j++)
+      {
         float outDeg = 0.0f;
 
-        if (controlMode == 0) {
+        if (controlMode == 0)
+        {
           outDeg = Ajoint * sinf(
             j / fmaxf(lambda * L, 1e-6f)
             + 2.0f * PI * frequency * t
           );
-          angleDeg[j] = servoDefaultAngles[j] + outDeg;
-
-        } else if (controlMode == 1) {
+        }
+        else if (controlMode == 1)
+        {
           float fb_phase = 0.0f, fb_amp = 0.0f;
-
-          // 未來 feedback 用這裡
           updateCPG(t, dt, j, fb_phase, fb_amp);
           outDeg = getCPGOutput(j);
-          angleDeg[j] = servoDefaultAngles[j] + outDeg;
-
-        } else {
-          angleDeg[j] = servoDefaultAngles[j];
         }
-        // ★ 關鍵：在這裡定義「目標角」
-        servoState[j].targetDeg = angleDeg[j];
-        int pos = degreeToLX224(angleDeg[j]);
-        moveLX224(j + 1, pos, 50);
-        
-      }
-    }
-    vTaskDelay(pdMS_TO_TICKS(50));
-  }
 
-}
+        float targetDeg = servoDefaultAngles[j] + outDeg;
+        angleDeg[j] = targetDeg;
+        servoState[j].targetDeg = targetDeg;
 
-void readservoTask(void *pv)
-{
-  vTaskDelay(pdMS_TO_TICKS(10)); // ← 錯開半週期
-  while (1)
-  {
-    for (int j = 0; j < bodyNum; j++)
-    {
-      int pos = readPositionLX224(j + 1);
-
-      // === 若讀取失敗，直接略過 ===
-      if (pos < 0) {
-        continue;
+        int pos = degreeToLX224(targetDeg);
+        moveLX224(j + 1, pos, 80);   // 速度你已經調快，OK
       }
 
-      // === 更新 position ===
-      servoState[j].actualPos = pos;
+      /* ========= 2. 低頻、輪流 read（安全關鍵） ========= */
+      loopCount++;
 
-      // === position → degree ===
-      float deg = lx224ToDegree(pos);
-      servoState[j].actualDeg = deg;
+      // 每 4 圈才讀一次 → 80ms * 4 ≈ 320ms（~3 Hz）
+      if (loopCount % 4 == 0)
+      {
+        int j = readIndex;
 
-      // === 計算角度誤差 ===
-      servoState[j].errorDeg =
-        servoState[j].targetDeg - servoState[j].actualDeg;
+        int actualPos = readPositionLX224(j + 1);
+        if (actualPos >= 0)
+        {
+          servoState[j].actualPos = actualPos;
+
+          float actualDeg = lx224ToDegree(actualPos);
+          servoState[j].actualDeg = actualDeg;
+
+          servoState[j].errorDeg =
+            servoState[j].targetDeg - actualDeg;
+        }
+
+        // 下一圈換下一顆
+        readIndex++;
+        if (readIndex >= bodyNum)
+          readIndex = 0;
+      }
+
+      /* ========= 3. 誤差累積（只用已更新的資料） ========= */
+      accumulateServoError();
     }
-    accumulateServoError();
-    vTaskDelay(pdMS_TO_TICKS(50));
+
+    vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(80));
   }
 }
-
