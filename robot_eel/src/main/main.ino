@@ -35,7 +35,7 @@ float lambda = 0.7f;
 float L = 0.85f;
 float adsMinValidVoltage = 0.6f;
 bool  isPaused = false;
-int   controlMode = 2;
+int   controlMode = 0;
 bool  useFeedback = false;
 float feedbackGain = 1.0f;
 
@@ -49,8 +49,7 @@ unsigned long g_lastLogTime = 0;
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
-  Serial.println("✅ 原生 USB 已啟動");
+  delay(300);
 
   Serial1.begin(115200, SERIAL_8N1, SERVO_RX_PIN, SERVO_TX_PIN);
 
@@ -67,15 +66,7 @@ void setup() {
   }
 
   initCPG();
-    xTaskCreatePinnedToCore(
-    feedbackTask,
-    "feedbackTask",
-    4096,
-    nullptr,
-    1,        // priority 低
-    nullptr,
-    1         // 跟 servoTask 同 core，UART 不會亂
-  );
+  initLogFile();
 
   xTaskCreatePinnedToCore(
     servoTask,
@@ -84,12 +75,21 @@ void setup() {
     nullptr,
     2,        // servo 優先度高
     nullptr,
-    1
+    0
   );
+
+  // xTaskCreatePinnedToCore(
+  //   readservoTask,
+  //   "readservoTask",
+  //   4096,
+  //   nullptr,
+  //   1,   
+  //   nullptr,
+  //   1
+  // );
 }
 
 void loop() {
   server.handleClient();
   logServoErrorAvgPerMinute();   // ★ 每分鐘寫平均誤差
-  
 }

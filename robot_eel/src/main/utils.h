@@ -42,8 +42,8 @@ static inline float lx224ToDegree(int pos) {
 // =====================================================
 static inline uint8_t checksum(const uint8_t *buf) {
   uint16_t sum = 0;
-  uint8_t len = buf[3];
-  for (int i = 2; i < len + 2; ++i) sum += buf[i];
+  uint8_t length = buf[3];
+  for (int i = 2; i < length + 2; ++i) sum += buf[i];
   return (uint8_t)(~sum);
 }
 
@@ -74,7 +74,9 @@ static inline void writePacket(uint8_t id,
 static inline void moveLX224(uint8_t id,
                              int position,
                              uint16_t time_ms) {
-  position = position < 0 ? 0 : (position > 1000 ? 1000 : position);
+  if (position < 0) position = 0;
+  if (position > 1000) position = 1000;
+
 
   uint8_t p[4];
   p[0] = position & 0xFF;
@@ -86,90 +88,56 @@ static inline void moveLX224(uint8_t id,
 }
 
 // =====================================================
-// LX-224 READ_POS（原樣保留）
+// LX224 回傳讀取（最穩版本）
+// - 封包對齊
+// - 等待資料完全到齊
+// - CSV 紀錄
 // =====================================================
+#define DEBUG_READ 0   // ← 打開 debug print
+
 inline int readPositionLX224(uint8_t id) {
-  while (Serial1.available()) Serial1.read();
+    while (Serial1.available()) Serial1.read();
 
-  uint8_t pkg[6] = {0x55, 0x55, id, 3, CMD_READ_POS, 0};
-  pkg[5] = checksum(pkg);
-  Serial1.write(pkg, 6);
+    uint8_t pkg[6] = {0x55, 0x55, id, 3, CMD_READ_POS, 0};
+    pkg[5] = checksum(pkg);
 
-  unsigned long t0 = micros();
-  uint8_t h[2] = {0, 0};
+    Serial1.write(pkg, 6);
 
-  while (micros() - t0 < 5000) {
-    if (Serial1.available()) {
-      h[0] = h[1];
-      h[1] = Serial1.read();
-      if (h[0] == 0x55 && h[1] == 0x55) break;
+    unsigned long t0 = micros();
+
+    // 讀取 header (0x55, 0x55)
+    uint8_t header[2];
+    while (micros() - t0 < 5000) {
+        if (Serial1.available()) {
+            header[0] = header[1];
+            header[1] = Serial1.read();
+            if (header[0] == 0x55 && header[1] == 0x55) break;
+        }
     }
-  }
-  if (!(h[0] == 0x55 && h[1] == 0x55)) return -1;
+    if (!(header[0] == 0x55 && header[1] == 0x55)) return -1;
 
-  uint8_t r[5];
-  for (int i = 0; i < 5; i++) {
-    while (!Serial1.available()) {
-      if (micros() - t0 > 8000) return -1;
+    // 讀取剩餘固定 5 bytes
+    uint8_t resp[5];
+    for (int i = 0; i < 5; i++) {
+        while (!Serial1.available()) {
+            if (micros() - t0 > 8000) return -1;
+        }
+        resp[i] = Serial1.read();
     }
-    r[i] = Serial1.read();
-  }
 
-  if (r[0] != id) return -1;
-  if (r[2] != CMD_READ_POS) return -1;
+    // resp[0] = ID
+    // resp[1] = LEN
+    // resp[2] = CMD
+    // resp[3] = POS_L
+    // resp[4] = POS_H
 
-  return r[3] | (r[4] << 8);
-}
+    if (resp[0] != id) return -1;
+    if (resp[2] != CMD_READ_POS) return -1;
 
-// =====================================================
-// 高層 API：送 MOVE（不讀）
-// =====================================================
-static inline void setServoDegree(uint8_t index,
-                                  float deg,
-                                  uint16_t time_ms = 50) {
-  if (index >= bodyNum) return;
+    int pos = resp[3] | (resp[4] << 8);
 
-  ServoState &s = servoState[index];
-  int pos = degreeToLX224(deg);
-
-  s.targetDeg = deg;
-  s.targetPos = pos;
-
-  moveLX224(index + 1, pos, time_ms);
-}
-
-// =====================================================
-// ★ 低頻、安全的 Feedback（你要的那種）
-// =====================================================
-static inline void updateServoFeedbackSlow() {
-  static unsigned long lastReadMs = 0;
-
-  // ★ 關鍵：慢速（500 ms，≈ 2 Hz）
-  if (millis() - lastReadMs < 500) return;
-  lastReadMs = millis();
-
-  for (int i = 0; i < bodyNum; i++) {
-    int pos = readPositionLX224(i + 1);
-    if (pos < 0) continue;
-
-    servoState[i].actualPos = pos;
-    servoState[i].actualDeg = lx224ToDegree(pos);
-    servoState[i].errorDeg  = servoState[i].actualDeg
-                              - servoState[i].targetDeg;
-    servoState[i].t_ms = millis();
-
-    Serial.printf(
-      "[FB] id=%d pos=%d deg=%.1f err=%.1f\n",
-      i + 1,
-      pos,
-      servoState[i].actualDeg,
-      servoState[i].errorDeg
-    );
-  }
-}
-void feedbackTask(void *pv) {
-  for (;;) {
-    updateServoFeedbackSlow();   // ★ 就放這裡
-    vTaskDelay(50 / portTICK_PERIOD_MS); // task 自己跑很快也沒關係
-  }
+#if DEBUG_READ
+    Serial.printf("[OK] ID=%d POS=%d\n", id, pos);
+#endif
+    return pos;
 }

@@ -14,7 +14,7 @@
 #define HEADER 0x55
 
 #define CMD_MOVE_TIME_WRITE 0x01
-#define CMD_READ_POS        0x15
+#define CMD_READ_POS        0x1C
 #define CMD_ID_WRITE        0x13
 
 #define BROADCAST_ID 0xFE
