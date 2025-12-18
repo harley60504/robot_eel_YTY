@@ -7,6 +7,7 @@
 #include <SPIFFS.h>
 #include <Wire.h>
 #include <SPI.h>
+#include "driver/uart.h"
 
 #include "config.h"
 #include "utils.h"
@@ -53,7 +54,7 @@ void setup() {
 
   Serial1.begin(115200, SERIAL_8N1, SERVO_RX_PIN, SERVO_TX_PIN);
 
-
+  uart_set_mode(UART_NUM_1, UART_MODE_RS485_HALF_DUPLEX);
   connectToWiFi();
 
   setupWebServer();
@@ -66,11 +67,29 @@ void setup() {
   }
 
   initCPG();
+    xTaskCreatePinnedToCore(
+    feedbackTask,
+    "feedbackTask",
+    4096,
+    nullptr,
+    1,        // priority 低
+    nullptr,
+    1         // 跟 servoTask 同 core，UART 不會亂
+  );
 
-  xTaskCreatePinnedToCore(servoTask, "ServoTask", 4096, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(
+    servoTask,
+    "servoTask",
+    4096,
+    nullptr,
+    2,        // servo 優先度高
+    nullptr,
+    1
+  );
 }
 
 void loop() {
   server.handleClient();
   logServoErrorAvgPerMinute();   // ★ 每分鐘寫平均誤差
+  
 }
