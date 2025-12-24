@@ -11,9 +11,8 @@
 #include "camera_init.h"    // ★ 要加
 #include "cam_stream.h"     
 #include "cam_control.h"
-#include "servo_api.h"
 
-WebServer server(80);
+
 WebSocketsServer wsServer(82);
 
 void setup() 
@@ -27,13 +26,12 @@ void setup()
     initStreamWS(wsServer);
     initControlWS(wsServer);
 
-    server.begin();
+    
     wsServer.begin();
 }
 
 void loop() 
 {
-    server.handleClient();
     wsServer.loop();
     sendCameraFrame(wsServer);  // 只有 initCamera() 成功後，這才能讀到 frame
 }
