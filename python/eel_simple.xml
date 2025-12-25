@@ -2,10 +2,17 @@
     <compiler angle="degree" coordinate="local"/>
     <option timestep="0.002"/>
 
-    <asset>
+    <!-- <asset>
         <mesh name="tail" file="tail_simple.stl"/>
+    </asset> -->
+    <asset>
+        <mesh name="tail" file="tail.stl"  scale="0.001 0.001 0.001"/>
+        <mesh name="seg2_mesh" file="bus.stl" scale="0.001 0.001 0.001"/>
+        <mesh name="seg3_mesh" file="bus.stl" scale="0.001 0.001 0.001"/>
+        <mesh name="seg4_mesh" file="bus.stl" scale="0.001 0.001 0.001"/>
+        <mesh name="seg5_mesh" file="bus.stl" scale="0.001 0.001 0.001"/>
+        <mesh name="seg6_mesh" file="bustail.stl" scale="0.001 0.001 0.001"/>
     </asset>
-
     <default>
         <joint
             type="hinge"
@@ -26,33 +33,72 @@
             <joint name="j1"/>
 
             <!-- Segment 2 -->
-            <body name="seg2" pos="0.095 0 0">
-                <geom type="box" size="0.04 0.02 0.025"/>
-                <joint name="j2"/>
+                            <body name="seg2" pos="0.085 0 0"> 
+                                <!-- 碰撞 / 物理骨架（保留） -->   
+                                <geom type="box" size="0.04 0.02 0.025" rgba="0 0 0 0"/>
+
+                                <geom type="mesh" mesh="seg2_mesh"
+                                    contype="0" conaffinity="0"
+                                    quat="0 0 1 0"
+                                    pos="0.1 -0.02 0.02"
+                                    rgba="1 0 0 1"/>
+                                <joint name="j2"/>
 
                 <!-- Segment 3 -->
-                <body name="seg3" pos="0.085 0 0">
-                    <geom type="box" size="0.04 0.02 0.025"/>
-                    <joint name="j3"/>
+                            <body name="seg3" pos="0.085 0 0"> 
+                                <!-- 碰撞 / 物理骨架（保留） -->   
+                                <geom type="box" size="0.04 0.02 0.025" rgba="0 0 0 0"/>
+
+                                <geom type="mesh" mesh="seg3_mesh"
+                                    contype="0" conaffinity="0"
+                                    quat="0 0 1 0"
+                                    pos="0.1 -0.02 0.02"
+                                    rgba="1 0 0 1"/>
+                                <joint name="j3"/>
 
                     <!-- Segment 4 -->
-                    <body name="seg4" pos="0.085 0 0">
-                        <geom type="box" size="0.04 0.02 0.025"/>
-                        <joint name="j4"/>
+                            <body name="seg4" pos="0.085 0 0"> 
+                                <!-- 碰撞 / 物理骨架（保留） -->   
+                                <geom type="box" size="0.04 0.02 0.025" rgba="0 0 0 0"/>
+
+                                <geom type="mesh" mesh="seg4_mesh"
+                                    contype="0" conaffinity="0"
+                                    quat="0 0 1 0"
+                                    pos="0.08 -0.02 0.02"
+                                    rgba="1 0 0 1"/>
+                                <joint name="j4"/>
 
                         <!-- Segment 5 -->
-                        <body name="seg5" pos="0.085 0 0">
-                            <geom type="box" size="0.04 0.02 0.025"/>
-                            <joint name="j5"/>
+                            <body name="seg5" pos="0.085 0 0"> 
+                                <!-- 碰撞 / 物理骨架（保留） -->   
+                                <geom type="box" size="0.04 0.02 0.025" rgba="0 0 0 0"/>
+
+                                <geom type="mesh" mesh="seg5_mesh"
+                                    contype="0" conaffinity="0"
+                                    quat="0 0 1 0"
+                                    pos="0.07 -0.02 0.02"
+                                    rgba="1 0 0 1"/>
+                                <joint name="j5"/>
 
                             <!-- Segment 6 -->
-                            <body name="seg6" pos="0.085 0 0">
-                                <geom type="box" size="0.04 0.02 0.025"/>
+                            <body name="seg6" pos="0.085 0 0"> 
+                                <!-- 碰撞 / 物理骨架（保留） -->   
+                                <geom type="box" size="0.04 0.02 0.025" rgba="0 0 0 0"/>
+
+                                <geom type="mesh" mesh="seg6_mesh"
+                                    contype="0" conaffinity="0"
+                                    quat="1 0 0 0"
+                                    pos="-0.03 -0.02 -0.02"
+                                    rgba="1 0 0 1"/>
                                 <joint name="j6"/>
 
                                 <!-- Tail -->
                                 <body name="tail" pos="0.045 0 0">
-                                    <geom type="mesh" mesh="tail"/>
+                                    <geom type="mesh" mesh="tail"
+                                    contype="0" conaffinity="0"
+                                    quat="1 -1 0 0"
+                                    pos="0 -0.01 0.02"
+                                    rgba="1 0 0 1"/>
                                 </body>
 
                             </body>

@@ -9,7 +9,7 @@ dt = 0.002
 
 print("Launching viewer...")
 
-freq = 0.01
+freq = 0.1
 
 amp = 0.5  
 
