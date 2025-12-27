@@ -6,8 +6,8 @@
 #define WIFI_AP_PASS   "12345678"
 
 // WIFI STA mode
-#define WIFI_STA_SSID  "TP-Link_9BD8_2.4g"
-#define WIFI_STA_PASS  "qwer4321"
+#define WIFI_STA_SSID  "YTY_2.4g"
+#define WIFI_STA_PASS  "weareytylab"
 
 // Camera defaults
 #define CAMERA_FRAME_SIZE    FRAMESIZE_SVGA
