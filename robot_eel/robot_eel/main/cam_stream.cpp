@@ -33,5 +33,4 @@ void sendCameraFrame(WebSocketsServer &wsServer)
     wsServer.broadcastBIN(fb->buf, fb->len);
 
     esp_camera_fb_return(fb);
-    delay(5);
 }

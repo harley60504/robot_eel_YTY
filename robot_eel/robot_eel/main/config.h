@@ -10,7 +10,7 @@
 #define WIFI_STA_PASS  "qwer4321"
 
 // Camera defaults
-#define CAMERA_FRAME_SIZE    FRAMESIZE_QVGA
+#define CAMERA_FRAME_SIZE    FRAMESIZE_SVGA
 #define CAMERA_JPEG_QUALITY  15
 #define CAMERA_FB_COUNT      1
 
